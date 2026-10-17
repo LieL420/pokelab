@@ -25,6 +25,7 @@ jobs:
           node-version-file: .node-version
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @pokelab/api prisma:generate
       - run: pnpm --filter @pokelab/api prisma:validate
       - run: pnpm lint
       - run: pnpm test
