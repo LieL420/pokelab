@@ -1,0 +1,23 @@
+{
+  "name": "pokelab",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma Pokédex e Team Builder do PokéLab",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --parallel --filter @pokelab/web --filter @pokelab/api dev",
+    "dev:web": "pnpm --filter @pokelab/web dev",
+    "dev:api": "pnpm --filter @pokelab/api dev",
+    "build": "pnpm --recursive build",
+    "lint": "pnpm --recursive lint",
+    "format": "pnpm --recursive format",
+    "test": "pnpm --recursive test",
+    "check": "pnpm lint && pnpm test && pnpm build"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

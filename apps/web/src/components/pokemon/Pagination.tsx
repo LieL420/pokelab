@@ -1,0 +1,3 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+
+export function Pagination({ page, total, pageSize, onChange }: { page: number; total: number; pageSize: number; onChange: (page: number) => void }) { const pages = Math.max(1, Math.ceil(total / pageSize)); if (pages <= 1) return null; return <nav className="pagination" aria-label="Paginação da Pokédex"><button aria-label="Página anterior" disabled={page <= 1} onClick={() => onChange(page - 1)} type="button"><ChevronLeft size={16} /></button><span>Página <strong>{page}</strong> de {pages}</span><button aria-label="Próxima página" disabled={page >= pages} onClick={() => onChange(page + 1)} type="button"><ChevronRight size={16} /></button></nav> }

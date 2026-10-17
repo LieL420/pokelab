@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id          String   @id @db.Uuid
+  displayName String?  @map("display_name")
+  avatarUrl   String?  @map("avatar_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  teams       Team[]
+
+  @@map("profiles")
+}
+
+model Team {
+  id          String        @id @default(uuid()) @db.Uuid
+  ownerId     String        @map("owner_id") @db.Uuid
+  name        String
+  description String?
+  format      String        @default("casual")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  owner       Profile       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  pokemon     TeamPokemon[]
+
+  @@index([ownerId, updatedAt(sort: Desc)])
+  @@map("teams")
+}
+
+model TeamPokemon {
+  id                   String             @id @default(uuid()) @db.Uuid
+  teamId               String             @map("team_id") @db.Uuid
+  position             Int                @db.SmallInt
+  speciesId            Int                @map("species_id")
+  speciesSlug          String             @map("species_slug")
+  formId               Int?               @map("form_id")
+  formSlug             String?            @map("form_slug")
+  displayNameSnapshot  String             @map("display_name_snapshot")
+  spriteUrlSnapshot    String?            @map("sprite_url_snapshot")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+  team                 Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  moves                TeamPokemonMove[]
+
+  @@unique([teamId, position])
+  @@index([teamId])
+  @@map("team_pokemon")
+}
+
+model TeamPokemonMove {
+  id                 String      @id @default(uuid()) @db.Uuid
+  teamPokemonId      String      @map("team_pokemon_id") @db.Uuid
+  slot               Int         @db.SmallInt
+  moveId             Int         @map("move_id")
+  moveSlug           String      @map("move_slug")
+  moveNameSnapshot   String      @map("move_name_snapshot")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+  teamPokemon        TeamPokemon @relation(fields: [teamPokemonId], references: [id], onDelete: Cascade)
+
+  @@unique([teamPokemonId, slot])
+  @@unique([teamPokemonId, moveId])
+  @@index([teamPokemonId])
+  @@map("team_pokemon_moves")
+}

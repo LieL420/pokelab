@@ -1,0 +1,21 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Native helpers are optional for this workspace and are intentionally not run
+# during installation in the managed Windows environment.
+ignoredBuiltDependencies:
+  - '@parcel/watcher'
+  - 'unrs-resolver'
+allowBuilds:
+  '@google/genai': false
+  '@parcel/watcher': false
+  '@prisma/client': true
+  '@prisma/engines': true
+  prisma: true
+  protobufjs: false
+  unrs-resolver: false
+
+overrides:
+  effect@<3.20.0: 3.20.0
+  deepmerge-ts@<8.0.0: 8.0.0

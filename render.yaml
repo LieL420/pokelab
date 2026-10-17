@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: pokelab-api
+    runtime: node
+    plan: free
+    region: oregon
+    autoDeployTrigger: commit
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @pokelab/api prisma:generate && pnpm --filter @pokelab/api build
+    startCommand: pnpm --filter @pokelab/api start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: WEB_ORIGIN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: POKEAPI_BASE_URL
+        value: https://pokeapi.co/api/v2
+      - key: POKEAPI_TIMEOUT_MS
+        value: 8000
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: GEMINI_TIMEOUT_MS
+        value: 20000
+      - key: AI_REQUESTS_PER_MINUTE
+        value: 6
+      - key: AI_CACHE_TTL_MS
+        value: 300000
