@@ -35,11 +35,19 @@ Data da auditoria: 17 de outubro de 2026.
 - projeto Supabase `pokelab-production` criado em São Paulo, migração aplicada e URL de autenticação configurada para o domínio público;
 - Vercel e Render conectados ao branch `main`, com deploy automático pelo GitHub.
 
+## Verificação final do código
+
+- `pnpm check` aprovado localmente após executar explicitamente `prisma generate`: lint, TypeScript, 7 suítes/15 testes da API e builds de frontend e backend.
+- O run remoto `39065517012` falhou em uma instalação limpa porque o Prisma Client não era gerado durante a instalação. A correção foi publicada em `main`: pnpm fixado em `11.25.0` e geração explícita do client na pipeline antes dos testes.
+- O resultado do novo run do GitHub Actions ainda precisa ser conferido; não há acesso à execução do workflow por esta sessão.
+
 ## Validações ainda pendentes
 
 - cadastro, confirmação de e-mail, login, logout e recuperação de senha com uma conta de teste controlada;
 - CRUD completo de times, persistência após novo login e isolamento RLS com duas contas;
 - chamada autenticada ao Gemini e comportamento dos limites/cotas na chave de produção;
 - teste manual em dispositivos e navegadores diferentes, rede lenta, API suspensa e falhas dos provedores.
+- rotação da chave Gemini de produção. Ela apareceu em uma captura de configuração durante a sessão anterior; gere uma chave nova no Google AI Studio e substitua `GEMINI_API_KEY` no Render antes de usar a IA em produção.
+- confirmação do novo resultado do GitHub Actions após a correção.
 
-Esses cenários exigem contas de teste e interações externas específicas. Eles não foram marcados como aprovados sem execução.
+Esses cenários exigem acesso aos painéis/contas de produção e execução autenticada. Eles não foram marcados como aprovados sem execução.
