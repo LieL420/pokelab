@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Plataforma Pokédex e Team Builder do PokéLab",
+  "packageManager": "pnpm@11.25.0",
   "workspaces": [
     "apps/*",
     "packages/*"
