@@ -14,7 +14,7 @@ A API também expõe `GET /api/health` e responde com o contrato:
 
 O backend expõe a consulta pública da PokéAPI em `/api/v1/pokemon` e o CRUD privado de times em `/api/v1/teams`, com Pokémon, até quatro golpes por integrante, análise casual-v1 e autorização por proprietário. Cadastro, login, logout e recuperação de senha usam Supabase Auth. Análises e recomendações do Gemini exigem login, passam por validação, rate limiting e cache curto.
 
-> Status público: a preparação de código está concluída, mas GitHub, Supabase, Render e Vercel ainda precisam ser conectados. Não há URL pública validada neste momento. Consulte [a auditoria da Etapa 9](docs/stage9-audit.md).
+> Status público: a aplicação está publicada em [pokelab-flax.vercel.app](https://pokelab-flax.vercel.app), com a API em [pokelab-api.onrender.com](https://pokelab-api.onrender.com/api/health). O health check, a integração frontend/API, a Pokédex e uma rota profunda foram validados em produção. Consulte [a auditoria da Etapa 9](docs/stage9-audit.md) para o escopo exato dos testes.
 
 ### Interface da Etapa 5
 
@@ -98,8 +98,8 @@ O backend usa `PORT` (produção), `API_PORT` (fallback local), `WEB_ORIGIN`, `S
 
 ## Produção
 
-- Frontend: Vercel, com Root Directory `apps/web` e variáveis públicas do Vite.
-- Backend: Render, descrito por `render.yaml`; o health check é `/api/health`.
+- Frontend: [Vercel](https://pokelab-flax.vercel.app), com Root Directory `apps/web` e variáveis públicas do Vite.
+- Backend: [Render](https://pokelab-api.onrender.com/api/health), descrito por `render.yaml`; o health check é `/api/health`.
 - Banco/Auth: Supabase; a migração versionada está em `infra/migrations/`.
 - IA: Gemini 3.5 Flash-Lite, somente pelo backend.
 - CI: `.github/workflows/ci.yml` executa schema, lint, testes e builds.

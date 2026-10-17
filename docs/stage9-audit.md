@@ -23,14 +23,23 @@ Data da auditoria: 17 de outubro de 2026.
 - Blueprint da Render, CI do GitHub e versão de Node fixada;
 - documentação de deploy, atualização, rollback, migrações e limitações gratuitas.
 
-## Bloqueios externos ainda não validados
+## Estado remoto validado
 
-- não existe commit, remoto ou repositório GitHub conectado;
-- CLIs `gh`, `vercel`, `supabase` e `render` não estão instaladas/autenticadas;
-- valores Supabase locais são exemplos e o frontend não possui configuração Supabase;
-- não há projeto remoto inspecionável para reconciliar/aplicar a migração;
-- não existem URLs públicas de Render/Vercel;
-- testes reais de Auth, CRUD, RLS com duas contas e persistência não podem ser executados sem o Supabase de produção;
-- testes públicos de dispositivos, falhas e Gemini não podem ser marcados como aprovados antes dos deploys.
+- repositório público: <https://github.com/LieL420/pokelab>;
+- frontend Vercel: <https://pokelab-flax.vercel.app>;
+- API Render: <https://pokelab-api.onrender.com>;
+- `GET /api/health` respondeu `{"status":"ok","service":"pokelab-api"}`;
+- a home confirmou a API como online;
+- `/pokedex` carregou 1.025 registros reais e paginação;
+- o acesso direto a `/pokedex/25` confirmou o rewrite de SPA e carregou a ficha do Pikachu;
+- projeto Supabase `pokelab-production` criado em São Paulo, migração aplicada e URL de autenticação configurada para o domínio público;
+- Vercel e Render conectados ao branch `main`, com deploy automático pelo GitHub.
 
-Esses itens permanecem pendentes até que as contas/projetos dos provedores sejam conectados. Nenhum link ou resultado remoto deve ser inventado.
+## Validações ainda pendentes
+
+- cadastro, confirmação de e-mail, login, logout e recuperação de senha com uma conta de teste controlada;
+- CRUD completo de times, persistência após novo login e isolamento RLS com duas contas;
+- chamada autenticada ao Gemini e comportamento dos limites/cotas na chave de produção;
+- teste manual em dispositivos e navegadores diferentes, rede lenta, API suspensa e falhas dos provedores.
+
+Esses cenários exigem contas de teste e interações externas específicas. Eles não foram marcados como aprovados sem execução.
