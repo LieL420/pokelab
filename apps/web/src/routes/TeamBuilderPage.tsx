@@ -1,13 +1,13 @@
 import { ArrowDown, ArrowLeft, ArrowUp, Check, ChevronDown, ChevronRight, CircleAlert, Plus, Save, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { PokemonPicker } from '@/components/team/PokemonPicker'
 import { TeamAnalysisPanel } from '@/components/team/TeamAnalysisPanel'
 import { TeamAiPanel } from '@/components/team/TeamAiPanel'
 import { PokemonTypeBadge } from '@/components/pokemon/PokemonTypeBadge'
-import { getPokemonDetails, getTeam, addTeamPokemon, createTeam, previewTeamStrategicAnalysis, getTeamStrategicAnalysis, removeTeamPokemon, replaceTeamMoves, updateTeam, updateTeamPokemon } from '@/lib/api'
+import { getPokemonDetails, getPokemonList, getTeam, addTeamPokemon, createTeam, previewTeamStrategicAnalysis, getTeamStrategicAnalysis, removeTeamPokemon, replaceTeamMoves, updateTeam, updateTeamPokemon } from '@/lib/api'
 import { analyzeLocalTeam } from '@/lib/team-analysis'
 import { useAuth } from '@/lib/use-auth'
 import type { PokemonDetails, PokemonMove, PokemonSummary } from '@/types/pokemon'
@@ -40,6 +40,7 @@ function memberFromSummary(pokemon: PokemonSummary, position: number, id?: strin
 export function TeamBuilderPage() {
   const { teamId } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user, loading: authLoading } = useAuth()
   const [editor, setEditor] = useState<TeamEditorState>(() => teamId ? blankEditor() : readDraft())
   const [pickerPosition, setPickerPosition] = useState<number | null>(null)
@@ -52,6 +53,17 @@ export function TeamBuilderPage() {
   const loadedTeamId = useRef<string | null>(null)
 
   const savedTeamQuery = useQuery({ queryKey: ['team', teamId], queryFn: ({ signal }) => getTeam(teamId || '', signal), enabled: Boolean(teamId && user) })
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void queryClient.prefetchQuery({
+        queryKey: ['team-picker', '', 'all'],
+        queryFn: ({ signal }) => getPokemonList({ page: 1, pageSize: 12 }, signal),
+        staleTime: 10 * 60 * 1000,
+      })
+    }, 150)
+    return () => window.clearTimeout(timer)
+  }, [queryClient])
 
   useEffect(() => {
     if (!teamId || !savedTeamQuery.data?.data || loadedTeamId.current === teamId) return
@@ -172,7 +184,7 @@ export function TeamBuilderPage() {
   if (teamId && savedTeamQuery.isError) return <div className="state-panel"><CircleAlert className="text-coral" /><h2>Não foi possível abrir este time</h2><p>{savedTeamQuery.error instanceof Error ? savedTeamQuery.error.message : 'Verifique sua sessão e tente novamente.'}</p><Button onClick={() => void savedTeamQuery.refetch()} variant="outline">Tentar novamente</Button></div>
 
   return <div className="team-builder-page space-y-5">
-    <div className="team-builder-header"><div><Link className="back-link" to="/teams"><ArrowLeft size={15} /> Meus times</Link><div className="mt-5 flex flex-wrap items-center gap-3"><span className="page-kicker">BANCADA / {editor.id ? 'EDIÇÃO' : 'RASCUNHO LOCAL'}</span><span className="casual-badge">CASUAL</span></div><h1 className="mt-3 font-display text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">Monte seu time<span className="text-electric">.</span></h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">Escolha até seis espécimes e ajuste os golpes que você quer levar para a próxima ideia.</p></div><div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/teams"><SlidersHorizontal size={16} /> Meus times</Link></Button><Button onClick={() => void save()} disabled={saving || !dirty}><Save size={16} /> {saving ? 'Salvando…' : dirty ? 'Salvar alterações' : 'Tudo salvo'}</Button></div></div>
+    <div className="team-builder-header"><div><Link className="back-link" to="/teams"><ArrowLeft size={15} /> Meus times</Link><h1 className="mt-5 font-display text-4xl font-black tracking-[-0.06em] text-white sm:text-6xl">Monte seu time<span className="text-electric">.</span></h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">Escolha até seis espécimes e ajuste os golpes que você quer levar para a próxima ideia.</p></div><div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link to="/teams"><SlidersHorizontal size={16} /> Meus times</Link></Button><Button onClick={() => void save()} disabled={saving || !dirty}><Save size={16} /> {saving ? 'Salvando…' : dirty ? 'Salvar alterações' : 'Tudo salvo'}</Button></div></div>
     {notice && <div className={`team-notice ${notice.type === 'error' ? 'team-notice-error' : 'team-notice-success'}`} role="status"><span>{notice.type === 'error' ? <CircleAlert size={17} /> : <Check size={17} />}</span><p>{notice.message}</p><button onClick={() => setNotice(null)} aria-label="Fechar aviso" type="button"><X size={15} /></button></div>}
     <section className="team-meta-card"><div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end"><label className="field-label"><span>Nome do time</span><input className="field-input" maxLength={80} value={editor.name} onChange={(event) => setEditor((current) => ({ ...current, name: event.target.value }))} placeholder="Ex.: Rota da Aurora" /></label><label className="field-label"><span>Descrição <em className="font-normal text-slate-600">opcional</em></span><input className="field-input" maxLength={500} value={editor.description} onChange={(event) => setEditor((current) => ({ ...current, description: event.target.value }))} placeholder="Uma frase sobre a ideia do time" /></label><div className="team-count"><strong>{editor.pokemon.length}</strong><span>/ 6<br />slots usados</span></div></div></section>
     <div className="team-builder-grid grid gap-4 xl:grid-cols-[minmax(0,1fr)_21rem]"><section aria-labelledby="team-slots-title"><div className="mb-3 flex items-center justify-between"><div><span className="page-kicker">FORMAÇÃO</span><h2 id="team-slots-title" className="mt-1 font-display text-xl font-bold text-white">Seis posições, uma hipótese</h2></div><span className="font-mono text-xs text-slate-600">{dirty ? 'alterações pendentes' : 'sincronizado'}</span></div><div className="team-slots-grid">{Array.from({ length: 6 }, (_, index) => { const position = index + 1; const member = editor.pokemon.find((item) => item.position === position); const detail = member ? detailByMemberIndex[editor.pokemon.indexOf(member)] : undefined; return <TeamSlotCard key={position} member={member} detail={detail} position={position} onAdd={() => setPickerPosition(position)} onRemove={() => member && removeMember(member)} onMove={(direction) => member && moveMember(member, direction)} onMoveSelect={(slot, value) => member && setMove(member, detail, slot, value)} /> })}</div></section><div className="team-builder-sidebar"><TeamAnalysisPanel analysis={analysis} loading={editor.pokemon.length > 0 && detailQueries.some((query) => query.isPending)} strategicAnalysis={strategicAnalysisQuery.data?.data ?? null} strategicLoading={strategicAnalysisQuery.isFetching} strategicStale={Boolean(strategicAnalysisQuery.data && analysisSource !== analysisSnapshot)} strategicError={strategicAnalysisQuery.error instanceof Error ? strategicAnalysisQuery.error.message : null} onAnalyze={requestStrategicAnalysis} /></div></div><section className="team-builder-ai" aria-labelledby="team-ai-title"><TeamAiPanel editor={editor} onApplyPokemon={applyAiPokemon} onApplyMoveset={applyAiMoveset} /></section>

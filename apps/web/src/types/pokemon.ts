@@ -27,6 +27,8 @@ export type PokemonMove = {
   power?: number | null
   accuracy?: number | null
   pp?: number | null
+  learnMethod?: string | null
+  levelLearnedAt?: number | null
 }
 
 export type PokemonDetails = PokemonSummary & {

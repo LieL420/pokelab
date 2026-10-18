@@ -62,4 +62,23 @@ describe('PokemonService', () => {
 
     await expect(service.list({ search: 'pika', page: 1, pageSize: 24 })).resolves.toMatchObject({ meta: { total: 1 }, data: [{ name: 'Pikachu' }] })
   })
+
+  it('keeps the catalog usable when one summary request fails', async () => {
+    const catalog = { results: [{ name: 'bulbasaur', url: 'https://pokeapi.co/api/v2/pokemon/1/' }, { name: 'ivysaur', url: 'https://pokeapi.co/api/v2/pokemon/2/' }] }
+    const ivysaur = { id: 2, name: 'ivysaur', species: { name: 'ivysaur', url: 'https://pokeapi.co/api/v2/pokemon-species/2/' }, sprites: { front_default: 'https://img/ivysaur.png' }, types: [{ slot: 1, type: { name: 'grass', url: '' } }] }
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('pokemon?limit=1025')) return { ok: true, status: 200, json: async () => catalog } as Response
+      if (url.endsWith('/pokemon/bulbasaur')) throw new TypeError('provider unavailable')
+      return { ok: true, status: 200, json: async () => ivysaur } as Response
+    })
+
+    await expect(service.list({ page: 1, pageSize: 12 })).resolves.toMatchObject({
+      meta: { total: 2 },
+      data: [
+        { id: 1, name: 'Bulbasaur', types: [], spriteUrl: expect.stringContaining('/pokemon/1.png') },
+        { id: 2, name: 'Ivysaur', types: ['grass'] },
+      ],
+    })
+  })
 })
