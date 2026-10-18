@@ -1,6 +1,6 @@
 # Etapa 9 — auditoria e estado da publicação
 
-Data da auditoria: 17 de outubro de 2026.
+Data da auditoria: 17 de outubro de 2026. Última verificação pública: 18 de outubro de 2026.
 
 ## Validado localmente
 
@@ -39,7 +39,12 @@ Data da auditoria: 17 de outubro de 2026.
 
 - `pnpm check` aprovado localmente após executar explicitamente `prisma generate`: lint, TypeScript, 7 suítes/15 testes da API e builds de frontend e backend.
 - O run remoto `39065517012` falhou em uma instalação limpa porque o Prisma Client não era gerado durante a instalação. A correção foi publicada em `main`: pnpm fixado em `11.25.0` e geração explícita do client na pipeline antes dos testes.
-- O resultado do novo run do GitHub Actions ainda precisa ser conferido; não há acesso à execução do workflow por esta sessão.
+- O run `39066265677` do GitHub Actions terminou com sucesso no commit `68c5951`.
+- A URL pública, a rota direta `/pokedex/25`, a API e a consulta real por Pikachu responderam com HTTP 200 em 18 de outubro de 2026.
+- A interface foi aberta em um navegador externo: home exibiu a API online, Pokédex mostrou 1.025 registros e o Team Builder carregou o rascunho local.
+- Cadastro com confirmação por e-mail temporário e login por senha foram executados com sucesso no Supabase de produção; a caixa de e-mail temporária foi removida após o teste.
+- Rotas privadas de times e IA responderam 401 sem token, e a análise estratégica pública respondeu 201 com o ruleset `casual-v1`.
+- A chave configurada respondeu HTTP 200 diretamente na API do Gemini, sem ser exibida no relatório.
 
 ## Validações ainda pendentes
 
@@ -48,6 +53,7 @@ Data da auditoria: 17 de outubro de 2026.
 - chamada autenticada ao Gemini e comportamento dos limites/cotas na chave de produção;
 - teste manual em dispositivos e navegadores diferentes, rede lenta, API suspensa e falhas dos provedores.
 - rotação da chave Gemini de produção. Ela apareceu em uma captura de configuração durante a sessão anterior; gere uma chave nova no Google AI Studio e substitua `GEMINI_API_KEY` no Render antes de usar a IA em produção.
-- confirmação do novo resultado do GitHub Actions após a correção.
+- teste autenticado completo de CRUD, persistência e isolamento com duas contas: a segunda rodada foi bloqueada pelo limite de envio de e-mail do Supabase (`429 over_email_send_rate_limit`).
 
 Esses cenários exigem acesso aos painéis/contas de produção e execução autenticada. Eles não foram marcados como aprovados sem execução.
+
