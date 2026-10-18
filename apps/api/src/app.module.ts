@@ -24,6 +24,7 @@ import { AiModule } from './ai/ai.module'
         DATABASE_URL: Joi.string().uri({ scheme: ['postgres', 'postgresql'] }).when('NODE_ENV', { is: 'production', then: Joi.required(), otherwise: Joi.optional() }),
         POKEAPI_BASE_URL: Joi.string().uri().default('https://pokeapi.co/api/v2'),
         POKEAPI_TIMEOUT_MS: Joi.number().integer().min(100).max(30000).default(5000),
+        POKEAPI_CACHE_TTL_MS: Joi.number().integer().min(60000).max(604800000).default(86400000),
         GEMINI_API_KEY: Joi.string().optional(),
         GEMINI_MODEL: Joi.string().default('gemini-3.5-flash-lite'),
         GEMINI_TIMEOUT_MS: Joi.number().integer().min(1000).max(60000).default(15000),

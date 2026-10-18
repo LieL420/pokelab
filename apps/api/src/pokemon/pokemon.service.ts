@@ -31,14 +31,17 @@ export class PokemonProviderError extends Error {}
 @Injectable()
 export class PokemonService {
   private readonly cache = new Map<string, CacheEntry>()
+  private readonly inFlight = new Map<string, Promise<unknown>>()
   private readonly baseUrl: string
   private readonly timeoutMs: number
-  private readonly cacheTtlMs = 5 * 60 * 1000
+  private readonly cacheTtlMs: number
+  private readonly maxCacheEntries = 2_000
   private readonly listCacheKey = 'pokemon-catalog-names'
 
   constructor(config: ConfigService) {
     this.baseUrl = config.get<string>('POKEAPI_BASE_URL', 'https://pokeapi.co/api/v2').replace(/\/$/, '')
     this.timeoutMs = config.get<number>('POKEAPI_TIMEOUT_MS', 5000)
+    this.cacheTtlMs = config.get<number>('POKEAPI_CACHE_TTL_MS', 24 * 60 * 60 * 1000)
   }
 
   async resolvePokemon(reference: {
@@ -183,7 +186,7 @@ export class PokemonService {
     if (cached && cached.expiresAt > Date.now()) return cached.value as string[]
     const resource = await this.getRaw<{ results: ApiResource[] }>('pokemon?limit=1025&offset=0')
     const names = resource.results.map((item) => item.name)
-    this.cache.set(this.listCacheKey, { value: names, expiresAt: Date.now() + this.cacheTtlMs })
+    this.setCache(this.listCacheKey, names)
     return names
   }
 
@@ -214,6 +217,19 @@ export class PokemonService {
     const cached = this.cache.get(key)
     if (cached && cached.expiresAt > Date.now()) return cached.value as T
 
+    const pending = this.inFlight.get(key)
+    if (pending) return pending as Promise<T>
+
+    const request = this.fetchRaw<T>(path, key, cached)
+    this.inFlight.set(key, request)
+    try {
+      return await request
+    } finally {
+      if (this.inFlight.get(key) === request) this.inFlight.delete(key)
+    }
+  }
+
+  private async fetchRaw<T>(path: string, key: string, stale?: CacheEntry): Promise<T> {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs)
     try {
@@ -221,10 +237,11 @@ export class PokemonService {
       if (response.status === 404) throw new PokemonNotFoundError()
       if (!response.ok) throw new PokemonProviderError(`PokéAPI respondeu ${response.status}.`)
       const value = (await response.json()) as T
-      this.cache.set(key, { value, expiresAt: Date.now() + this.cacheTtlMs })
+      this.setCache(key, value)
       return value
     } catch (error) {
       if (error instanceof PokemonNotFoundError) throw new NotFoundException('Pokémon ou golpe não encontrado na PokéAPI.')
+      if (stale) return stale.value as T
       if (error instanceof DOMException && error.name === 'AbortError') {
         throw new ServiceUnavailableException('A PokéAPI excedeu o tempo limite.')
       }
@@ -234,6 +251,15 @@ export class PokemonService {
     } finally {
       clearTimeout(timeout)
     }
+  }
+
+  private setCache(key: string, value: unknown): void {
+    if (!this.cache.has(key) && this.cache.size >= this.maxCacheEntries) {
+      const oldestKey = this.cache.keys().next().value as string | undefined
+      if (oldestKey) this.cache.delete(oldestKey)
+    }
+    this.cache.delete(key)
+    this.cache.set(key, { value, expiresAt: Date.now() + this.cacheTtlMs })
   }
 
   private idFromUrl(url: string): number {

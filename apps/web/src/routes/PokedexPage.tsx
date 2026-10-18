@@ -16,7 +16,7 @@ export function PokedexPage() {
   const [type, setType] = useState('all')
   const [page, setPage] = useState(1)
   useEffect(() => { const timer = window.setTimeout(() => { setSearch(searchInput.trim()); setPage(1) }, 350); return () => window.clearTimeout(timer) }, [searchInput])
-  const query = useQuery({ queryKey: ['pokemon-list', { search, generation, type, page }], queryFn: ({ signal }) => getPokemonList({ search, generation: generation === 'all' ? undefined : generation, type: type === 'all' ? undefined : type, page, pageSize: 24 }, signal), placeholderData: (previous) => previous })
+  const query = useQuery({ queryKey: ['pokemon-list', { search, generation, type, page }], queryFn: ({ signal }) => getPokemonList({ search, generation: generation === 'all' ? undefined : generation, type: type === 'all' ? undefined : type, page, pageSize: 24 }, signal), placeholderData: (previous) => previous, staleTime: 10 * 60 * 1000, gcTime: 30 * 60 * 1000, refetchOnWindowFocus: false })
   const hasFilters = Boolean(search || generation !== 'all' || type !== 'all')
   function clearFilters() { setSearchInput(''); setSearch(''); setGeneration('all'); setType('all'); setPage(1) }
   return <div className="space-y-8">

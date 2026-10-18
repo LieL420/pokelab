@@ -26,6 +26,20 @@ describe('PokemonService', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it('shares an in-flight request between simultaneous lookups', async () => {
+    const response = {
+      id: 25,
+      name: 'pikachu',
+      species: { name: 'pikachu', url: 'https://pokeapi.co/api/v2/pokemon-species/25/' },
+      sprites: { front_default: 'https://img/pikachu.png' },
+      types: [{ slot: 1, type: { name: 'electric', url: '' } }],
+    }
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, status: 200, json: async () => response } as Response)
+
+    await Promise.all([service.getSummary('pikachu'), service.getSummary('pikachu'), service.getSummary('pikachu')])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('converts a PokéAPI 404 to a stable not found error', async () => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) } as Response)
     await expect(service.getSummary('missingno')).rejects.toBeInstanceOf(NotFoundException)
