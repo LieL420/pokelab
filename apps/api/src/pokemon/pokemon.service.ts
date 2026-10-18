@@ -17,7 +17,7 @@ type ApiPokemon = {
   types: Array<{ slot: number; type: ApiResource }>
   stats?: Array<{ base_stat: number; stat: ApiResource }>
   abilities?: Array<{ ability: ApiResource; is_hidden: boolean }>
-  moves?: Array<{ move: ApiResource }>
+  moves?: Array<{ move: ApiResource; version_group_details?: Array<{ level_learned_at?: number; move_learn_method?: ApiResource; version_group?: ApiResource }> }>
 }
 type ApiSpecies = { evolution_chain?: ApiResource }
 type ApiEvolutionNode = { species: ApiResource; evolves_to: ApiEvolutionNode[]; evolution_details?: Array<{ min_level?: number | null; item?: ApiResource | null; trigger?: ApiResource | null; time_of_day?: string; known_move?: ApiResource | null }> }
@@ -96,10 +96,10 @@ export class PokemonService {
     const moves = await Promise.all((pokemon.moves ?? []).slice(0, 48).map(async (item) => {
       try {
         const move = await this.getRaw<ApiMove>(this.resourcePath(item.move.url))
-        return { id: move.id, slug: move.name, name: this.titleCase(move.name), type: move.type?.name ?? null, category: move.damage_class?.name ? this.titleCase(move.damage_class.name) : null, power: move.power ?? null, accuracy: move.accuracy ?? null, pp: move.pp ?? null }
+        return { id: move.id, slug: move.name, name: this.titleCase(move.name), type: move.type?.name ?? null, category: move.damage_class?.name ? this.titleCase(move.damage_class.name) : null, power: move.power ?? null, accuracy: move.accuracy ?? null, pp: move.pp ?? null, ...this.moveLearning(item) }
       } catch {
         partial = true
-        return { id: this.idFromUrl(item.move.url), slug: item.move.name, name: this.titleCase(item.move.name), type: null, category: null, power: null, accuracy: null, pp: null }
+        return { id: this.idFromUrl(item.move.url), slug: item.move.name, name: this.titleCase(item.move.name), type: null, category: null, power: null, accuracy: null, pp: null, ...this.moveLearning(item) }
       }
     }))
     return {
@@ -222,6 +222,14 @@ export class PokemonService {
     if (details.known_move) return `Golpe: ${this.titleCase(details.known_move.name)}`
     if (details.time_of_day) return details.time_of_day === 'day' ? 'Durante o dia' : 'Durante a noite'
     return details.trigger?.name ? this.titleCase(details.trigger.name) : null
+  }
+
+  private moveLearning(item: { version_group_details?: Array<{ level_learned_at?: number; move_learn_method?: ApiResource }> }): { learnMethod: string | null; levelLearnedAt: number | null } {
+    const details = item.version_group_details ?? []
+    const latest = details[details.length - 1]
+    const method = latest?.move_learn_method?.name
+    const labels: Record<string, string> = { 'level-up': 'Nível', machine: 'TM', tutor: 'Tutor', egg: 'Ovo', event: 'Evento', 'stadium-surfing-pikachu': 'Evento' }
+    return { learnMethod: method ? labels[method] ?? this.titleCase(method) : null, levelLearnedAt: method === 'level-up' ? latest?.level_learned_at ?? null : null }
   }
 
   private resourcePath(url: string): string {
