@@ -36,7 +36,7 @@ export class PokemonService {
   private readonly timeoutMs: number
   private readonly cacheTtlMs: number
   private readonly maxCacheEntries = 2_000
-  private readonly listCacheKey = 'pokemon-catalog-names'
+  private readonly listCacheKey = 'pokemon-catalog-entries'
 
   constructor(config: ConfigService) {
     this.baseUrl = config.get<string>('POKEAPI_BASE_URL', 'https://pokeapi.co/api/v2').replace(/\/$/, '')
@@ -125,7 +125,7 @@ export class PokemonService {
         for (const entry of resource.pokemon.slice(0, 12)) names.add(entry.pokemon.name)
       } catch { /* Keep candidates from the other preferred types. */ }
     }
-    if (!names.size) (await this.getCatalogNames()).slice(0, 24).forEach((name) => names.add(name))
+    if (!names.size) (await this.getCatalogEntries()).slice(0, 24).forEach(({ name }) => names.add(name))
     const summaries = await Promise.all([...names].slice(0, 24).map(async (name) => {
       try { return await this.getSummary(name) } catch { return null }
     }))
@@ -140,30 +140,33 @@ export class PokemonService {
 
   async list(query: { search?: string; type?: string; generation?: number; page: number; pageSize: number }) {
     const offset = (query.page - 1) * query.pageSize
-    const catalogNames = await this.getCatalogNames()
-    let names = [...catalogNames]
+    const catalog = await this.getCatalogEntries()
+    let entries = [...catalog]
     if (query.type) {
       const resource = await this.getRaw<{ pokemon: Array<{ pokemon: ApiResource }> }>(`type/${query.type}`)
       const typeNames = new Set(resource.pokemon.map((item) => item.pokemon.name))
-      names = names.filter((name) => typeNames.has(name))
+      entries = entries.filter(({ name }) => typeNames.has(name))
     }
     if (query.generation) {
       const resource = await this.getRaw<{ pokemon_species: ApiResource[] }>(`generation/${query.generation}`)
       const generationNames = new Set(resource.pokemon_species.map((item) => item.name))
-      names = names.filter((name) => generationNames.has(name))
+      entries = entries.filter(({ name }) => generationNames.has(name))
     }
     if (query.search) {
       const search = this.normalizeSearch(query.search)
       if (/^\d+$/.test(query.search)) {
-        const exactName = catalogNames[Number(query.search) - 1]
-        names = exactName ? names.filter((name) => name === exactName) : []
+        const id = Number(query.search)
+        entries = entries.filter((entry) => this.idFromUrl(entry.url) === id)
       } else {
-        names = names.filter((name) => this.normalizeSearch(name).includes(search) || name === search)
+        entries = entries.filter(({ name }) => this.normalizeSearch(name).includes(search) || name === search)
       }
     }
-    const pageItems = names.slice(offset, offset + query.pageSize)
-    const data = await Promise.all(pageItems.map((name) => this.getSummary(name)))
-    return { data, meta: { page: query.page, pageSize: query.pageSize, total: names.length } }
+    const pageItems = entries.slice(offset, offset + query.pageSize)
+    const summaries = await Promise.allSettled(pageItems.map(({ name }) => this.getSummary(name)))
+    const data = summaries.map((result, index) => result.status === 'fulfilled'
+      ? result.value
+      : this.toCatalogSummary(pageItems[index], query.type))
+    return { data, meta: { page: query.page, pageSize: query.pageSize, total: entries.length } }
   }
 
   private toSummary(pokemon: ApiPokemon): PokemonSummary {
@@ -181,13 +184,28 @@ export class PokemonService {
     }
   }
 
-  private async getCatalogNames(): Promise<string[]> {
+  private toCatalogSummary(resource: ApiResource, knownType?: string): PokemonSummary {
+    const id = this.idFromUrl(resource.url)
+    return {
+      id,
+      slug: resource.name,
+      name: this.titleCase(resource.name),
+      speciesId: id,
+      speciesSlug: resource.name,
+      formId: id,
+      formSlug: resource.name,
+      spriteUrl: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`,
+      artworkUrl: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
+      types: knownType ? [knownType] : [],
+    }
+  }
+
+  private async getCatalogEntries(): Promise<ApiResource[]> {
     const cached = this.cache.get(this.listCacheKey)
-    if (cached && cached.expiresAt > Date.now()) return cached.value as string[]
+    if (cached && cached.expiresAt > Date.now()) return cached.value as ApiResource[]
     const resource = await this.getRaw<{ results: ApiResource[] }>('pokemon?limit=1025&offset=0')
-    const names = resource.results.map((item) => item.name)
-    this.setCache(this.listCacheKey, names)
-    return names
+    this.setCache(this.listCacheKey, resource.results)
+    return resource.results
   }
 
   private async flattenEvolution(node: ApiEvolutionNode, condition: string | null = null): Promise<Array<Record<string, unknown>>> {

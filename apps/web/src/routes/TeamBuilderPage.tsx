@@ -1,13 +1,13 @@
 import { ArrowDown, ArrowLeft, ArrowUp, Check, ChevronDown, ChevronRight, CircleAlert, Plus, Save, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { PokemonPicker } from '@/components/team/PokemonPicker'
 import { TeamAnalysisPanel } from '@/components/team/TeamAnalysisPanel'
 import { TeamAiPanel } from '@/components/team/TeamAiPanel'
 import { PokemonTypeBadge } from '@/components/pokemon/PokemonTypeBadge'
-import { getPokemonDetails, getTeam, addTeamPokemon, createTeam, previewTeamStrategicAnalysis, getTeamStrategicAnalysis, removeTeamPokemon, replaceTeamMoves, updateTeam, updateTeamPokemon } from '@/lib/api'
+import { getPokemonDetails, getPokemonList, getTeam, addTeamPokemon, createTeam, previewTeamStrategicAnalysis, getTeamStrategicAnalysis, removeTeamPokemon, replaceTeamMoves, updateTeam, updateTeamPokemon } from '@/lib/api'
 import { analyzeLocalTeam } from '@/lib/team-analysis'
 import { useAuth } from '@/lib/use-auth'
 import type { PokemonDetails, PokemonMove, PokemonSummary } from '@/types/pokemon'
@@ -40,6 +40,7 @@ function memberFromSummary(pokemon: PokemonSummary, position: number, id?: strin
 export function TeamBuilderPage() {
   const { teamId } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user, loading: authLoading } = useAuth()
   const [editor, setEditor] = useState<TeamEditorState>(() => teamId ? blankEditor() : readDraft())
   const [pickerPosition, setPickerPosition] = useState<number | null>(null)
@@ -52,6 +53,17 @@ export function TeamBuilderPage() {
   const loadedTeamId = useRef<string | null>(null)
 
   const savedTeamQuery = useQuery({ queryKey: ['team', teamId], queryFn: ({ signal }) => getTeam(teamId || '', signal), enabled: Boolean(teamId && user) })
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void queryClient.prefetchQuery({
+        queryKey: ['team-picker', '', 'all'],
+        queryFn: ({ signal }) => getPokemonList({ page: 1, pageSize: 12 }, signal),
+        staleTime: 10 * 60 * 1000,
+      })
+    }, 150)
+    return () => window.clearTimeout(timer)
+  }, [queryClient])
 
   useEffect(() => {
     if (!teamId || !savedTeamQuery.data?.data || loadedTeamId.current === teamId) return

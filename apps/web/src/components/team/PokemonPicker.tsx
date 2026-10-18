@@ -22,6 +22,8 @@ export function PokemonPicker({ position, onSelect, onClose }: { position: numbe
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: 1,
+    retryDelay: 600,
   })
 
   return <div className="fixed inset-0 z-30 grid place-items-center bg-ink/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="pokemon-picker-title">
