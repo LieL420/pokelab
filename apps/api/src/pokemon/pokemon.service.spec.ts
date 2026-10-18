@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common'
+import { NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 import { PokemonService } from './pokemon.service'
 
 describe('PokemonService', () => {
@@ -43,6 +43,13 @@ describe('PokemonService', () => {
   it('converts a PokéAPI 404 to a stable not found error', async () => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) } as Response)
     await expect(service.getSummary('missingno')).rejects.toBeInstanceOf(NotFoundException)
+  })
+
+  it('rejects malformed identifiers before contacting the provider', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch')
+
+    await expect(service.getSummary('pikachu?limit=9999')).rejects.toBeInstanceOf(UnprocessableEntityException)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('supports partial name search across the catalog instead of only exact lookups', async () => {

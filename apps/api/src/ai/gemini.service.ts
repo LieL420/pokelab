@@ -13,6 +13,7 @@ export class GeminiService {
   private readonly timeoutMs: number
   private readonly cacheTtlMs: number
   private readonly cache = new Map<string, { expiresAt: number; value: unknown }>()
+  private readonly inFlight = new Map<string, Promise<unknown>>()
 
   constructor(config: ConfigService) {
     const key = config.get<string>('GEMINI_API_KEY')
@@ -31,14 +32,25 @@ export class GeminiService {
     const cached = this.cache.get(cacheKey)
     if (cached && cached.expiresAt > Date.now()) return cached.value as T
     if (cached) this.cache.delete(cacheKey)
-    const request = this.client.models.generateContent({ model: this.model, contents: prompt, config: { responseMimeType: 'application/json', responseSchema: schema as never, temperature: 0.2, maxOutputTokens: 1200 } })
+    const pending = this.inFlight.get(cacheKey)
+    if (pending) return pending as Promise<T>
+    const request = this.generateUncached<T>(prompt, schema, cacheKey)
+    this.inFlight.set(cacheKey, request)
+    try { return await request }
+    finally { if (this.inFlight.get(cacheKey) === request) this.inFlight.delete(cacheKey) }
+  }
+
+  private async generateUncached<T>(prompt: string, schema: Record<string, unknown>, cacheKey: string): Promise<T> {
+    const request = this.client!.models.generateContent({ model: this.model, contents: prompt, config: { responseMimeType: 'application/json', responseSchema: schema as never, temperature: 0.2, maxOutputTokens: 1200 } })
     let response: Awaited<typeof request>
-    try { response = await Promise.race([request, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gemini timeout')), this.timeoutMs))]) }
+    let timeout: ReturnType<typeof setTimeout> | undefined
+    try { response = await Promise.race([request, new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error('Gemini timeout')), this.timeoutMs) })]) }
     catch (error) {
       const message = error instanceof Error ? error.message : ''
       if (/429|resource_exhausted|quota/i.test(message)) throw new ServiceUnavailableException('A cota da IA foi atingida. Tente novamente mais tarde.')
       throw new ServiceUnavailableException('A IA está temporariamente indisponível. O Team Builder continua funcionando sem ela.')
     }
+    finally { if (timeout) clearTimeout(timeout) }
     const text = response.text?.trim()
     if (!text) throw new AiResponseInvalidError('A IA retornou uma resposta vazia.')
     try {

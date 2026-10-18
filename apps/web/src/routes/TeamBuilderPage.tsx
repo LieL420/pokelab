@@ -73,7 +73,7 @@ export function TeamBuilderPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [dirty])
 
-  const detailQueries = useQueries({ queries: editor.pokemon.map((member) => ({ queryKey: ['team-member-details', member.formId || member.speciesId], queryFn: ({ signal }: { signal: AbortSignal }) => getPokemonDetails(String(member.formId || member.speciesId), signal) })) })
+  const detailQueries = useQueries({ queries: editor.pokemon.map((member) => ({ queryKey: ['pokemon', String(member.formId || member.speciesId)], queryFn: ({ signal }: { signal: AbortSignal }) => getPokemonDetails(String(member.formId || member.speciesId), signal), staleTime: 24 * 60 * 60 * 1000, gcTime: 24 * 60 * 60 * 1000, refetchOnWindowFocus: false })) })
   const detailByMemberIndex = detailQueries.map((query) => query.data?.data)
   const knownDetails = detailByMemberIndex.filter((detail): detail is PokemonDetails => Boolean(detail))
   const analysis = knownDetails.length ? analyzeLocalTeam(knownDetails, editor.pokemon.flatMap((member) => member.moves.map((move) => move.moveId))) : null

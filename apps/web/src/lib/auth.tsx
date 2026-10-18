@@ -13,11 +13,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     let mounted = true
-    void supabaseClient.auth.getSession().then(({ data }) => {
-      if (!mounted) return
-      setSession(data.session)
-      setLoading(false)
-    })
+    void supabaseClient.auth.getSession()
+      .then(({ data }) => { if (mounted) setSession(data.session) })
+      .catch(() => { if (mounted) setSession(null) })
+      .finally(() => { if (mounted) setLoading(false) })
 
     const { data } = supabaseClient.auth.onAuthStateChange((_event, nextSession) => {
       if (mounted) setSession(nextSession)

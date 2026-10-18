@@ -10,7 +10,7 @@ const statLabels: Record<string, string> = { hp: 'HP', attack: 'Ataque', defense
 
 export function PokemonDetailPage() {
   const { identifier = '' } = useParams()
-  const query = useQuery({ queryKey: ['pokemon', identifier], queryFn: ({ signal }) => getPokemonDetails(identifier, signal), enabled: Boolean(identifier) })
+  const query = useQuery({ queryKey: ['pokemon', identifier], queryFn: ({ signal }) => getPokemonDetails(identifier, signal), enabled: Boolean(identifier), staleTime: 24 * 60 * 60 * 1000, gcTime: 24 * 60 * 60 * 1000, refetchOnWindowFocus: false })
   if (query.isPending) return <div className="detail-loading"><div className="detail-loading-orb" /><p>Consultando ficha do espécime…</p></div>
   if (query.isError || !query.data?.data) return <PokemonError message={query.error instanceof Error ? query.error.message : 'A ficha não está disponível.'} onRetry={() => void query.refetch()} />
   const pokemon = query.data.data

@@ -53,7 +53,7 @@ export class PokemonService {
     const identifier = reference.formId ?? reference.formSlug ?? reference.speciesId ?? reference.speciesSlug
     if (!identifier) throw new UnprocessableEntityException('É necessário informar a referência do Pokémon.')
 
-    const raw = await this.getRaw<ApiPokemon>(`pokemon/${identifier}`)
+    const raw = await this.getRaw<ApiPokemon>(`pokemon/${this.normalizeIdentifier(identifier)}`)
     const pokemon = this.toSummary(raw)
     const speciesId = this.idFromUrl(raw.species.url)
     const speciesSlug = raw.species.name
@@ -75,12 +75,12 @@ export class PokemonService {
   async resolveMove(reference: { moveId?: number; moveSlug?: string }): Promise<MoveSummary> {
     const identifier = reference.moveId ?? reference.moveSlug
     if (!identifier) throw new UnprocessableEntityException('É necessário informar a referência do golpe.')
-    const move = await this.getRaw<ApiMove>(`move/${identifier}`)
+    const move = await this.getRaw<ApiMove>(`move/${this.normalizeIdentifier(identifier)}`)
     return { id: move.id, slug: move.name, name: this.titleCase(move.name) }
   }
 
   async getDetails(identifier: string): Promise<Record<string, unknown>> {
-    const pokemon = await this.getRaw<ApiPokemon>(`pokemon/${identifier}`)
+    const pokemon = await this.getRaw<ApiPokemon>(`pokemon/${this.normalizeIdentifier(identifier)}`)
     const summary = this.toSummary(pokemon)
     let partial = false
     let evolutionChain: Array<Record<string, unknown>> = []
@@ -114,7 +114,7 @@ export class PokemonService {
   }
 
   async getSummary(identifier: string | number): Promise<PokemonSummary> {
-    return this.toSummary(await this.getRaw<ApiPokemon>(`pokemon/${identifier}`))
+    return this.toSummary(await this.getRaw<ApiPokemon>(`pokemon/${this.normalizeIdentifier(identifier)}`))
   }
 
   async getRecommendationCandidates(preferredTypes: string[] = [], excludedSpeciesIds: number[] = []): Promise<PokemonSummary[]> {
@@ -275,5 +275,13 @@ export class PokemonService {
 
   private normalizeSearch(value: string): string {
     return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[.'’]/g, '').replace(/\s+/g, '-')
+  }
+
+  private normalizeIdentifier(value: string | number): string {
+    const identifier = String(value).trim().toLowerCase()
+    if (!/^(?:[1-9]\d{0,5}|[a-z0-9]+(?:-[a-z0-9]+)*)$/.test(identifier) || identifier.length > 120) {
+      throw new UnprocessableEntityException('O identificador informado é inválido.')
+    }
+    return identifier
   }
 }
